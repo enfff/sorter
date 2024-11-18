@@ -17,6 +17,13 @@ class MainWindow(Gtk.ApplicationWindow):
         self.image_paths = []
         self.buttons = {}
 
+        # Default values
+        # self.class_shortcuts = {
+        #     "anomaly": "a",
+        #     "background": "b",
+        #     # "trash": "t"
+        # }
+
         GLib.set_application_name("Sorter")
 
         self.header = Gtk.HeaderBar()
@@ -45,9 +52,9 @@ class MainWindow(Gtk.ApplicationWindow):
 
         self.hamburger = Gtk.MenuButton()
         self.hamburger.set_popover(self.popover)
-        self.hamburger.set_icon_name("open-menu-symbolic")  # Give it a nice icon
+        self.hamburger.set_icon_name("open-menu-symbolic")
 
-        self.header.pack_start(self.hamburger)
+        self.header.pack_end(self.hamburger)
 
         self.open_folder_button.connect("clicked", self.show_open_dialog)
 
@@ -61,13 +68,6 @@ class MainWindow(Gtk.ApplicationWindow):
         self.status_page.set_hexpand(True)
         self.status_page.set_vexpand(True)
         container.append(self.status_page)
-
-        # Default values
-        # self.class_shortcuts = {
-        #     "anomaly": "a",
-        #     "background": "b",
-        #     # "trash": "t"
-        # }
 
         self.image_container = container
         self.picture = Gtk.Picture()
@@ -199,7 +199,7 @@ class MyApp(Adw.Application):
 
     def on_activate(self, app):
         self.win = MainWindow(application=app)
-        self.win.set_title("Sorter")
+        self.win.set_title("sortyyy")
         self.win.set_default_size(800, 600)
         self.win.set_size_request(400, 400)  # Set minimum size (width, height)
         
