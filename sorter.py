@@ -51,7 +51,6 @@ class MainWindow(Gtk.ApplicationWindow):
         # Signals
         self.open_folder_button.connect("clicked", self.show_open_dialog)
 
-
     
     def show_open_dialog(self, button):
         dialog = Gtk.FileDialog()
