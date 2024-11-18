@@ -13,6 +13,10 @@ class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.image_index = 0
+        self.image_paths = []
+        self.buttons = {}
+
         GLib.set_application_name("Sorter")
 
         self.header = Gtk.HeaderBar()
@@ -85,21 +89,28 @@ class MainWindow(Gtk.ApplicationWindow):
         self.create_action_button("Background", "background")
         self.create_action_button("Trash", "trash")
 
-        # Set up actions for each class
-        self.add_action(Gio.SimpleAction.new("anomaly", None))
-        self.add_action(Gio.SimpleAction.new("background", None))
-        self.add_action(Gio.SimpleAction.new("trash", None))
+        action_anomaly = Gio.SimpleAction.new("anomaly", None)
+        action_anomaly.connect("activate", lambda action, param: self.move_image_to_class(action, param, "anomaly"))
+        self.add_action(action_anomaly)
 
-    
+        action_background = Gio.SimpleAction.new("background", None)
+        action_background.connect("activate", lambda action, param: self.move_image_to_class(action, param, "background"))
+        self.add_action(action_background)
+
+        action_trash = Gio.SimpleAction.new("trash", None)
+        action_trash.connect("activate", lambda action, param: self.move_image_to_class(action, param, "trash"))
+        self.add_action(action_trash)
+
+        self.update_button_states()
+
     
     def create_action_button(self, label, action_name):
         button = Gtk.Button(label=label)
-        
         if label == "Trash":
             button.get_style_context().add_class("destructive-action")
-
         button.connect("clicked", lambda btn: self.activate_action(action_name))
         self.action_bar.append(button)
+        self.buttons[action_name] = button
             
 
     def show_open_dialog(self, button):
@@ -120,6 +131,8 @@ class MainWindow(Gtk.ApplicationWindow):
     def load_images_from_folder(self, folder_path):
         self.image_paths = [p for p in Path(folder_path).iterdir() if p.suffix.lower() in IMAGE_EXTENSIONS]
         self.image_index = 0
+        self.update_button_states()
+
         if self.image_paths:
             self.show_picture()
             self.load_and_display_image()
@@ -132,7 +145,9 @@ class MainWindow(Gtk.ApplicationWindow):
             self.display_image(image_path)
         else:
             self.show_status_page()
+            self.image_paths = []
             print("No more images to display.")
+            self.update_button_states()
 
     def display_image(self, image_path):
         try:
@@ -152,22 +167,28 @@ class MainWindow(Gtk.ApplicationWindow):
         self.status_page.hide()
         self.picture.show()
 
+    def update_button_states(self):
+        state = bool(self.image_paths)
+        for button in self.buttons.values():
+            button.set_sensitive(state)
 
-    def move_image_to_class(self, class_name):
+    def move_image_to_class(self, action, parameter, class_name):
+
+        # print(f"Moving image to class {class_name}")
+
         if self.image_index < len(self.image_paths):
             image_path = self.image_paths[self.image_index]
             class_folder = os.path.join(self.current_folder, class_name)
-            class_folder.mkdir(exist_ok=True)
-            new_path = class_folder / image_path.name
-            image_path.rename(new_path)
-            print(f"Moved {image_path} to {new_path}")
-            self.image_index += 1
-            self.load_and_display_image()
+            
+            if class_name == "trash":
+                image_path.unlink()
+                # print(f"Deleted {image_path}")
+            else:
+                os.makedirs(class_folder, exist_ok=True)
+                new_path = os.path.join(class_folder, image_path.name)
+                image_path.rename(new_path)
+                # print(f"Moved {image_path} to {new_path}")
 
-    def on_key_press(self, controller, keyval, keycode, state):
-        key = Gdk.keyval_name(keyval)
-        if key == "n":  # Shortcut key 'n' for next image
-            print("Next image shortcut pressed")
             self.image_index += 1
             self.load_and_display_image()
 
@@ -181,7 +202,14 @@ class MyApp(Adw.Application):
         self.win.set_title("Sorter")
         self.win.set_default_size(800, 600)
         self.win.set_size_request(400, 400)  # Set minimum size (width, height)
+        
+        self.set_accels_for_action("win.anomaly", ["a"])
+        self.set_accels_for_action("win.background", ["b"])
+        self.set_accels_for_action("win.trash", ["t"])
+        
         self.win.present()
+
+
 
 def main():
     Adw.init()
