@@ -67,6 +67,9 @@ class MainWindow(Gtk.ApplicationWindow):
 
         self.image_container = container
         self.picture = Gtk.Picture()
+        self.picture.set_margin_top(10)  # Add top margin to the picture
+        self.picture.set_margin_start(10)  # Add top margin to the picture
+        self.picture.set_margin_end(10)  # Add top margin to the picture
         container.append(self.picture)
 
         # Create the action bar with buttons
