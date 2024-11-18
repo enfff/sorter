@@ -47,6 +47,20 @@ class MainWindow(Gtk.ApplicationWindow):
         
         menu.append("About", "win.about") 
 
+        container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.set_child(container)
+        
+        status_page = Adw.StatusPage()
+        status_page.set_title("Welcome to Sorter")
+        status_page.set_description("Choose a folder to start sorting images")
+        status_page.set_icon_name("folder-pictures-symbolic")
+
+
+        status_page.set_hexpand(True)
+        status_page.set_vexpand(True)
+
+        container.append(status_page)
+
 
         # Signals
         self.open_folder_button.connect("clicked", self.show_open_dialog)
@@ -103,6 +117,7 @@ class MyApp(Adw.Application):
         self.win = MainWindow(application=app)
         self.win.set_title("Sorter")
         self.win.set_default_size(800, 600)
+        self.win.set_size_request(400, 400)
         self.win.present()
 
 app = MyApp(application_id="com.github.enfff.sorter")
