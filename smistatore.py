@@ -8,31 +8,19 @@ from gi.repository import Gtk, Adw, GLib, Gio
 class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Things will go here
+
+        GLib.set_application_name("Sorter")
 
         self.header = Gtk.HeaderBar()
         self.set_titlebar(self.header)
 
-        self.open_button = Gtk.Button(label="Open")
-        self.header.pack_start(self.open_button)
+        self.open_folder_button = Gtk.Button(label="Open")
+        self.header.pack_start(self.open_folder_button)
 
-        self.open_button.set_icon_name("document-open-symbolic")
+        self.open_folder_button.set_icon_name("document-open-symbolic")
 
-        self.open_dialog = Gtk.FileDialog.new()
-        self.open_dialog.set_title("Select a File")
-
-        # Commentato il filtro si aggiunge dopo
-        # TOOD
-        # file_filter = Gtk.FileFilter()
-        # file_filter.set_name("Image files")
-        # file_filter.add_mime_type("image/jpeg")
-        # file_filter.add_mime_type("image/png")
-
-        # filters = Gio.ListStore.new(Gtk.FileFilter)  # Create a ListStore with the type Gtk.FileFilter
-        # filters.append(file_filter)  # Add the file filter to the ListStore. You could add more.
-
-        # self.open_dialog.set_filters(filters)  # Set the filters for the open dialog
-        # self.open_dialog.set_default_filter(file_filter)
+        self.open_dialog = Gtk.FileDialog()
+        self.open_dialog.set_title("Select a folder")
 
         # Create a new "Action"
         action = Gio.SimpleAction.new("something", None)
@@ -53,8 +41,6 @@ class MainWindow(Gtk.ApplicationWindow):
 
         self.header.pack_start(self.hamburger)
 
-        GLib.set_application_name("Sorter")
-
         action = Gio.SimpleAction.new("about", None)
         action.connect("activate", self.show_about)
         self.add_action(action)
@@ -62,24 +48,32 @@ class MainWindow(Gtk.ApplicationWindow):
         menu.append("About", "win.about") 
 
 
-
         # Signals
-        self.open_button.connect("clicked", self.show_open_dialog)
+        self.open_folder_button.connect("clicked", self.show_open_dialog)
 
 
     
     def show_open_dialog(self, button):
-        self.open_dialog.open(self, None, self.open_dialog_open_callback)
-        
+        dialog = Gtk.FileDialog()
+
+        def on_select(dialog, result):
+            try:
+                folder = dialog.select_folder_finish(result)
+                # print(f"Selected folder: {folder.get_path()}")
+                self.load_images_from_folder(folder.get_path())
+            except Gtk.DialogError:
+                # user cancelled or backend error
+                pass
+
+        dialog.select_folder(self, None, on_select)
+
     
-    def open_dialog_open_callback(self, dialog, result):
-        try:
-            file = dialog.open_finish(result)
-            if file is not None:
-                print(f"File path is {file.get_path()}")
-                # Handle loading file from here
-        except GLib.Error as error:
-            print(f"Error opening file: {error.message}")
+    def load_images_from_folder(self, folder_path):
+        # self.image_paths = [p for p in Path(folder_path).iterdir() if p.suffix.lower() in IMAGE_EXTENSIONS]
+        # self.image_index = 0
+        # self.load_and_display_image()
+
+        print(f"{folder_path = }")
     
     
     def show_about(self, action, param):
@@ -93,10 +87,10 @@ class MainWindow(Gtk.ApplicationWindow):
         dialog.set_comments("Adw about Window example") 
         dialog.set_website("https://github.com/enfff/jackal-watch/") 
         dialog.set_issue_url("https://github.com/enfff/jackal-watch/issues") 
-        dialog.add_credit_section("Contributors", ["Name1 url"]) 
-        dialog.set_translator_credits("Name1 url") 
-        dialog.set_copyright("© 2022 developer") 
-        dialog.set_developers(["Developer"]) 
+        dialog.add_credit_section("Contributors", ["Francesco Paolo Carmone https://github.com/enfff"]) 
+        # dialog.set_translator_credits("Name1 url") 
+        # dialog.set_copyright("© 2024 Reply") 
+        dialog.set_developers(["enfff"]) 
         # dialog.set_application_icon("com.github.enfff.jackal-watch") # icon must be uploaded in ~/.local/share/icons or /usr/share/icons
         dialog.set_visible(True)
 
