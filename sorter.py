@@ -1,9 +1,11 @@
-import sys
+import os
 import gi
+import sys
 from pathlib import Path
+
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Gtk, Adw, GLib, Gio
+from gi.repository import Gtk, Adw, Gdk, Gio, GLib
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"}
 
@@ -43,30 +45,67 @@ class MainWindow(Gtk.ApplicationWindow):
 
         self.header.pack_start(self.hamburger)
 
-        action = Gio.SimpleAction.new("about", None)
-        action.connect("activate", self.show_about)
-        self.add_action(action)
-        
-        menu.append("About", "win.about") 
+        self.open_folder_button.connect("clicked", self.show_open_dialog)
 
         container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_child(container)
-        
-        status_page = Adw.StatusPage()
-        status_page.set_title("Welcome to Sorter")
-        status_page.set_description("Choose a folder to start sorting images")
-        status_page.set_icon_name("folder-pictures-symbolic")
 
-        status_page.set_hexpand(True)
-        status_page.set_vexpand(True)
+        self.status_page = Adw.StatusPage()
+        self.status_page.set_title("Welcome to Sorter")
+        self.status_page.set_description("Choose a folder to start sorting images")
+        self.status_page.set_icon_name("folder-pictures-symbolic")
+        self.status_page.set_hexpand(True)
+        self.status_page.set_vexpand(True)
+        container.append(self.status_page)
 
-        container.append(status_page)
+        # Default values
+        self.class_shortcuts = {
+            "anomaly": "a",
+            "background": "b",
+            # "trash": "t"
+        }
 
+        self.image_container = container
+        self.picture = Gtk.Picture()
+        container.append(self.picture)
 
-        # Signals
-        self.open_folder_button.connect("clicked", self.show_open_dialog)
+        # Create the action bar with buttons
+        self.action_bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        self.action_bar.set_margin_top(10)
+        self.action_bar.set_margin_bottom(10)
+        self.action_bar.set_margin_start(10)
+        self.action_bar.set_margin_end(10)
+        container.append(self.action_bar)
+
+        self.create_action_button("Anomaly", "anomaly")
+        self.create_action_button("Background", "background")
+        self.create_action_button("Trash", "trash")
+
+        # Set up actions for each class
+        self.add_action(Gio.SimpleAction.new("anomaly", None))
+        self.add_action(Gio.SimpleAction.new("background", None))
+        self.add_action(Gio.SimpleAction.new("trash", None))
 
     
+    
+    def create_action_button(self, label, action_name):
+
+        button = Gtk.Button(label=label)
+
+        if label == "Trash":
+            button.get_style_context().add_class("destructive-action")
+        
+        button.connect("clicked", lambda btn: self.activate_action(action_name))
+        self.action_bar.append(button)
+        
+    
+
+    def create_action_buttons(self):
+        for class_name, shortcut in self.class_shortcuts.items():
+            button = Gtk.Button(label=class_name.capitalize())
+            button.connect("clicked", lambda btn, name=class_name: self.activate_action(name))
+            self.action_bar.append(button)
+
     def show_open_dialog(self, button):
         dialog = Gtk.FileDialog()
 
@@ -74,6 +113,7 @@ class MainWindow(Gtk.ApplicationWindow):
             try:
                 folder = dialog.select_folder_finish(result)
                 print(f"Selected folder: {folder.get_path()}")
+                self.current_folder = folder.get_path()
                 self.load_images_from_folder(folder.get_path())
             except Gtk.DialogError:
                 # user cancelled or backend error
@@ -81,31 +121,59 @@ class MainWindow(Gtk.ApplicationWindow):
 
         dialog.select_folder(self, None, on_select)
 
-    
     def load_images_from_folder(self, folder_path):
         self.image_paths = [p for p in Path(folder_path).iterdir() if p.suffix.lower() in IMAGE_EXTENSIONS]
         self.image_index = 0
-        self.load_and_display_image()
-    
-    
-    def show_about(self, action, param):
-        # Deprecrated method sorry no time to fix it.
+        if self.image_paths:
+            self.show_picture()
+            self.load_and_display_image()
+        else:
+            self.show_status_page()
 
-        dialog = Adw.AboutWindow(transient_for=app.get_active_window()) 
-        dialog.set_application_name("Sorter") 
-        dialog.set_version("0.01-alpha") 
-        dialog.set_developer_name("enfff") 
-        dialog.set_license_type(Gtk.License(Gtk.License.GPL_3_0)) 
-        dialog.set_comments("Adw about Window example") 
-        dialog.set_website("https://github.com/enfff/jackal-watch/") 
-        dialog.set_issue_url("https://github.com/enfff/jackal-watch/issues") 
-        dialog.add_credit_section("Contributors", ["Francesco Paolo Carmone https://github.com/enfff"]) 
-        # dialog.set_translator_credits("Name1 url") 
-        # dialog.set_copyright("© 2024 Reply") 
-        dialog.set_developers(["enfff"]) 
-        # dialog.set_application_icon("com.github.enfff.jackal-watch") # icon must be uploaded in ~/.local/share/icons or /usr/share/icons
-        dialog.set_visible(True)
+    def load_and_display_image(self):
+        if self.image_index < len(self.image_paths):
+            image_path = self.image_paths[self.image_index]
+            self.display_image(image_path)
+        else:
+            self.show_status_page()
+            print("No more images to display.")
 
+    def display_image(self, image_path):
+        try:
+            file = Gio.File.new_for_path(str(image_path))
+            texture = Gdk.Texture.new_from_file(file)
+            self.picture.set_paintable(texture)
+        except Exception as e:
+            print(f"Failed to load image {image_path}: {e}")
+
+    
+    def show_status_page(self):
+        self.status_page.show()
+        self.picture.hide()
+
+    
+    def show_picture(self):
+        self.status_page.hide()
+        self.picture.show()
+
+
+    def move_image_to_class(self, class_name):
+        if self.image_index < len(self.image_paths):
+            image_path = self.image_paths[self.image_index]
+            class_folder = os.path.join(self.current_folder, class_name)
+            class_folder.mkdir(exist_ok=True)
+            new_path = class_folder / image_path.name
+            image_path.rename(new_path)
+            print(f"Moved {image_path} to {new_path}")
+            self.image_index += 1
+            self.load_and_display_image()
+
+    def on_key_press(self, controller, keyval, keycode, state):
+        key = Gdk.keyval_name(keyval)
+        if key == "n":  # Shortcut key 'n' for next image
+            print("Next image shortcut pressed")
+            self.image_index += 1
+            self.load_and_display_image()
 
 class MyApp(Adw.Application):
     def __init__(self, **kwargs):
@@ -116,8 +184,13 @@ class MyApp(Adw.Application):
         self.win = MainWindow(application=app)
         self.win.set_title("Sorter")
         self.win.set_default_size(800, 600)
-        self.win.set_size_request(400, 400)
+        self.win.set_size_request(400, 400)  # Set minimum size (width, height)
         self.win.present()
 
-app = MyApp(application_id="com.github.enfff.sorter")
-app.run(sys.argv)
+def main():
+    Adw.init()
+    app = MyApp()
+    return app.run(sys.argv)
+
+if __name__ == "__main__":
+    sys.exit(main())
