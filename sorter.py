@@ -59,11 +59,11 @@ class MainWindow(Gtk.ApplicationWindow):
         container.append(self.status_page)
 
         # Default values
-        self.class_shortcuts = {
-            "anomaly": "a",
-            "background": "b",
-            # "trash": "t"
-        }
+        # self.class_shortcuts = {
+        #     "anomaly": "a",
+        #     "background": "b",
+        #     # "trash": "t"
+        # }
 
         self.image_container = container
         self.picture = Gtk.Picture()
@@ -75,6 +75,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.action_bar.set_margin_bottom(10)
         self.action_bar.set_margin_start(10)
         self.action_bar.set_margin_end(10)
+        self.action_bar.set_halign(Gtk.Align.CENTER)
         container.append(self.action_bar)
 
         self.create_action_button("Anomaly", "anomaly")
@@ -89,22 +90,14 @@ class MainWindow(Gtk.ApplicationWindow):
     
     
     def create_action_button(self, label, action_name):
-
         button = Gtk.Button(label=label)
-
+        
         if label == "Trash":
             button.get_style_context().add_class("destructive-action")
-        
+
         button.connect("clicked", lambda btn: self.activate_action(action_name))
         self.action_bar.append(button)
-        
-    
-
-    def create_action_buttons(self):
-        for class_name, shortcut in self.class_shortcuts.items():
-            button = Gtk.Button(label=class_name.capitalize())
-            button.connect("clicked", lambda btn, name=class_name: self.activate_action(name))
-            self.action_bar.append(button)
+            
 
     def show_open_dialog(self, button):
         dialog = Gtk.FileDialog()
