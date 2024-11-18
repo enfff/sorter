@@ -1,9 +1,11 @@
 import sys
 import gi
+from pathlib import Path
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Gtk, Adw, GLib, Gio
 
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"}
 
 class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, *args, **kwargs):
@@ -55,7 +57,6 @@ class MainWindow(Gtk.ApplicationWindow):
         status_page.set_description("Choose a folder to start sorting images")
         status_page.set_icon_name("folder-pictures-symbolic")
 
-
         status_page.set_hexpand(True)
         status_page.set_vexpand(True)
 
@@ -72,7 +73,7 @@ class MainWindow(Gtk.ApplicationWindow):
         def on_select(dialog, result):
             try:
                 folder = dialog.select_folder_finish(result)
-                # print(f"Selected folder: {folder.get_path()}")
+                print(f"Selected folder: {folder.get_path()}")
                 self.load_images_from_folder(folder.get_path())
             except Gtk.DialogError:
                 # user cancelled or backend error
@@ -82,11 +83,9 @@ class MainWindow(Gtk.ApplicationWindow):
 
     
     def load_images_from_folder(self, folder_path):
-        # self.image_paths = [p for p in Path(folder_path).iterdir() if p.suffix.lower() in IMAGE_EXTENSIONS]
-        # self.image_index = 0
-        # self.load_and_display_image()
-
-        print(f"{folder_path = }")
+        self.image_paths = [p for p in Path(folder_path).iterdir() if p.suffix.lower() in IMAGE_EXTENSIONS]
+        self.image_index = 0
+        self.load_and_display_image()
     
     
     def show_about(self, action, param):
@@ -94,7 +93,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
         dialog = Adw.AboutWindow(transient_for=app.get_active_window()) 
         dialog.set_application_name("Sorter") 
-        dialog.set_version("1.0") 
+        dialog.set_version("0.01-alpha") 
         dialog.set_developer_name("enfff") 
         dialog.set_license_type(Gtk.License(Gtk.License.GPL_3_0)) 
         dialog.set_comments("Adw about Window example") 
