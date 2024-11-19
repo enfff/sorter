@@ -153,8 +153,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def load_and_display_image(self):
         if self.image_index < len(self.image_paths):
-            image_path = self.image_paths[self.image_index]
-            self.display_image(image_path)
+            self.display_image(self.image_paths[self.image_index])
         else:
             self.show_status_page()
             self.image_paths = []
