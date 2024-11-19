@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="com.github.enfff.sorter" path="/com/github/enfff/sorter/">
+    <key name="window-width" type="i">
+      <default>800</default>
+      <summary>Window width</summary>
+      <description>The width of the main window</description>
+    </key>
+    <key name="window-height" type="i">
+      <default>600</default>
+      <summary>Window height</summary>
+      <description>The height of the main window</description>
+    </key>
+    <key name="classes" type="as">
+        <default>['anomaly', 'background']</default>
+        <summary>List of classes</summary>
+        <description>List of user-defined classes used to generate the subfolders</description>
+    </key>
+  </schema>
+</schemalist>
+
+<!-- glib-compile-schemas . -->
+ <!-- This file should be located here -->
+ <!-- /usr/share/glib-2.0/schemas/ -->

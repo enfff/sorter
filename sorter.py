@@ -9,22 +9,23 @@ from gi.repository import Gtk, Adw, Gdk, Gio, GLib
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"}
 
+# Used while developing to locate the GSettings schema
+os.environ["GSETTINGS_SCHEMA_DIR"] = str(Path(__file__).resolve().parent)
+
+# The reason the UI was hard coded is because the documentation for libadwaita is still in alpha.
+# The use of blueprints is well advised but awful to use in practice.
+
 class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # Can't get the Gsetting schema to work...
         self.image_index = 0
         self.image_paths = []
         self.buttons = {}
 
-        # Default values
-        # self.class_shortcuts = {
-        #     "anomaly": "a",
-        #     "background": "b",
-        #     # "trash": "t"
-        # }
-
         GLib.set_application_name("Sorter")
+
 
         self.header = Gtk.HeaderBar()
         self.set_titlebar(self.header)
@@ -58,8 +59,8 @@ class MainWindow(Gtk.ApplicationWindow):
 
         self.open_folder_button.connect("clicked", self.show_open_dialog)
 
-        container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.set_child(container)
+        self.container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.set_child(self.container)
 
         self.status_page = Adw.StatusPage()
         self.status_page.set_title("Welcome to Sorter")
@@ -67,14 +68,14 @@ class MainWindow(Gtk.ApplicationWindow):
         self.status_page.set_icon_name("folder-pictures-symbolic")
         self.status_page.set_hexpand(True)
         self.status_page.set_vexpand(True)
-        container.append(self.status_page)
+        self.container.append(self.status_page)
 
-        self.image_container = container
-        self.picture = Gtk.Picture()
-        self.picture.set_margin_top(10)  # Add top margin to the picture
-        self.picture.set_margin_start(10)  # Add top margin to the picture
-        self.picture.set_margin_end(10)  # Add top margin to the picture
-        container.append(self.picture)
+        self.image_container = self.container
+        self.picture_container = Gtk.Picture()
+        self.picture_container.set_margin_top(10)  # Add top margin to the picture
+        self.picture_container.set_margin_start(10)  # Add top margin to the picture
+        self.picture_container.set_margin_end(10)  # Add top margin to the picture
+        self.container.append(self.picture_container)
 
         # Create the action bar with buttons
         self.action_bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
@@ -83,7 +84,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.action_bar.set_margin_start(10)
         self.action_bar.set_margin_end(10)
         self.action_bar.set_halign(Gtk.Align.CENTER)
-        container.append(self.action_bar)
+        self.container.append(self.action_bar)
 
         self.create_action_button("Anomaly", "anomaly")
         self.create_action_button("Background", "background")
@@ -102,6 +103,17 @@ class MainWindow(Gtk.ApplicationWindow):
         self.add_action(action_trash)
 
         self.update_button_states()
+        self.connect("destroy", self.on_window_close)
+
+        self.set_default_settings()
+
+
+    def set_default_settings(self):
+        self.settings = Gio.Settings.new("com.github.enfff.sorter")
+        width = self.settings.get_int("window-width")
+        height = self.settings.get_int("window-height")
+        self.set_default_size(width, height)
+        print("Default settings set")
 
     
     def create_action_button(self, label, action_name):
@@ -153,19 +165,18 @@ class MainWindow(Gtk.ApplicationWindow):
         try:
             file = Gio.File.new_for_path(str(image_path))
             texture = Gdk.Texture.new_from_file(file)
-            self.picture.set_paintable(texture)
+            self.picture_container.set_paintable(texture)
         except Exception as e:
             print(f"Failed to load image {image_path}: {e}")
 
     
     def show_status_page(self):
         self.status_page.show()
-        self.picture.hide()
-
+        self.picture_container.hide()
     
     def show_picture(self):
         self.status_page.hide()
-        self.picture.show()
+        self.picture_container.show()
 
     def update_button_states(self):
         state = bool(self.image_paths)
@@ -173,8 +184,14 @@ class MainWindow(Gtk.ApplicationWindow):
             button.set_sensitive(state)
 
     def move_image_to_class(self, action, parameter, class_name):
-
-        # print(f"Moving image to class {class_name}")
+        """
+            Moves the image to the correct subfolder, specified by the class-name.
+            It's activated by pressing the shortcut keys associated with the action.
+            Defaults
+                - anomaly: a
+                - background: b
+                - trash: t
+        """
 
         if self.image_index < len(self.image_paths):
             image_path = self.image_paths[self.image_index]
@@ -182,15 +199,19 @@ class MainWindow(Gtk.ApplicationWindow):
             
             if class_name == "trash":
                 image_path.unlink()
-                # print(f"Deleted {image_path}")
             else:
                 os.makedirs(class_folder, exist_ok=True)
                 new_path = os.path.join(class_folder, image_path.name)
                 image_path.rename(new_path)
-                # print(f"Moved {image_path} to {new_path}")
 
             self.image_index += 1
             self.load_and_display_image()
+    
+    def on_window_close(self, window):
+        width, height = window.get_size()
+        self.settings.set_int("window-width", width)
+        self.settings.set_int("window-height", height)
+        return False
 
 class MyApp(Adw.Application):
     def __init__(self, **kwargs):
@@ -199,16 +220,16 @@ class MyApp(Adw.Application):
 
     def on_activate(self, app):
         self.win = MainWindow(application=app)
-        self.win.set_title("sortyyy")
-        self.win.set_default_size(800, 600)
-        self.win.set_size_request(400, 400)  # Set minimum size (width, height)
+        self.win.set_title("Sorter")
+        # self.win.set_default_size(800, 600)
+        # self.win.set_size_request(400, 440)  # Set minimum size (width, height)
         
         self.set_accels_for_action("win.anomaly", ["a"])
         self.set_accels_for_action("win.background", ["b"])
         self.set_accels_for_action("win.trash", ["t"])
+        self.set_accels_for_action("win.quit", ["<super>t"])
         
         self.win.present()
-
 
 
 def main():

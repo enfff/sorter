@@ -6,6 +6,7 @@ Contiene GUI etc
 **TODO**
 - Generalize to any class
 - Keep a buffer of paths, to allow for image restore
+- Load preferred settings
 
 Sources
 [Folder picker](https://www.reddit.com/r/GTK/comments/16mv5fl/unsure_how_to_use_gtkfiledialog_to_return_the/)
