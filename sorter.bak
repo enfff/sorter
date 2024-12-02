@@ -2,7 +2,6 @@ import os
 import gi
 import sys
 from pathlib import Path
-from collections import deque
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
@@ -22,19 +21,20 @@ class MainWindow(Gtk.ApplicationWindow):
         super().__init__(*args, **kwargs)
 
         # Can't get the Gsetting schema to work...
-        # self.image_index = 0
-        self.image_paths = deque([])
-        self.last_paths = deque([], maxlen=10)
+        self.image_index = 0
+        self.image_paths = []
         self.buttons = {}
-        self.image_path = ""
 
-        # self.count = {
-        #     "anomaly": 0,
-        #     "background": 0,
-        #     "trash": 0
-        # }
+        self.count = {
+            "anomaly": 0,
+            "background": 0,
+            "trash": 0
+        }
+
+        self.last_paths = []
 
         GLib.set_application_name("Sorter")
+
 
         self.header = Gtk.HeaderBar()
         self.set_titlebar(self.header)
@@ -46,6 +46,11 @@ class MainWindow(Gtk.ApplicationWindow):
 
         self.open_dialog = Gtk.FileDialog()
         self.open_dialog.set_title("Select a folder")
+
+        # Create a new "Action"
+        action = Gio.SimpleAction.new("something", None)
+        self.add_action(action)  # Here the action is being added to the window, but you could add it to the
+                                 # application or an "ActionGroup"
 
         # Create a new menu, containing that action
         menu = Gio.Menu.new()
@@ -76,9 +81,9 @@ class MainWindow(Gtk.ApplicationWindow):
 
         self.image_container = self.container
         self.picture_container = Gtk.Picture()
-        self.picture_container.set_margin_top(10)
-        self.picture_container.set_margin_start(10)
-        self.picture_container.set_margin_end(10)
+        self.picture_container.set_margin_top(10)  # Add top margin to the picture
+        self.picture_container.set_margin_start(10)  # Add top margin to the picture
+        self.picture_container.set_margin_end(10)  # Add top margin to the picture
         self.container.append(self.picture_container)
 
         # Create the action bar with buttons
@@ -117,10 +122,6 @@ class MainWindow(Gtk.ApplicationWindow):
         action_undo.connect("activate", lambda action, param: self.undo())
         self.add_action(action_undo)
 
-        action_openfolder = Gio.SimpleAction.new("openfolder", None)
-        action_openfolder.connect("activate", lambda action, param: self.show_open_dialog(button=None))
-        self.add_action(action_openfolder)
-
         self.set_default_settings()
 
 
@@ -141,7 +142,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.buttons[action_name] = button
             
 
-    def show_open_dialog(self, button: None):
+    def show_open_dialog(self, button):
         dialog = Gtk.FileDialog()
 
         def on_select(dialog, result):
@@ -157,9 +158,8 @@ class MainWindow(Gtk.ApplicationWindow):
         dialog.select_folder(self, None, on_select)
 
     def load_images_from_folder(self, folder_path):
-        self.image_paths = deque([p for p in Path(folder_path).iterdir() if p.suffix.lower() in IMAGE_EXTENSIONS])
-        self.last_paths = deque([])
-
+        self.image_paths = [p for p in Path(folder_path).iterdir() if p.suffix.lower() in IMAGE_EXTENSIONS]
+        self.image_index = 0
         self.update_button_states()
 
         if self.image_paths:
@@ -169,15 +169,12 @@ class MainWindow(Gtk.ApplicationWindow):
             self.show_status_page()
 
     def load_and_display_image(self):
-        # print(f"{self.image_paths = }")
-        if self.image_paths:
-            self.image_path = self.image_paths.pop()
-            # print(f"{self.image_path = }")
-            self.display_image(self.image_path)
+        if self.image_index < len(self.image_paths):
+            self.display_image(self.image_paths[self.image_index])
             return
         else:
             self.show_status_page()
-            self.image_paths = deque([])
+            self.image_paths = []
             print("No more images to display.")
             self.update_button_states()
             return
@@ -202,8 +199,9 @@ class MainWindow(Gtk.ApplicationWindow):
         self.picture_container.show()
 
     def update_button_states(self):
+        state = bool(self.image_paths)
         for button in self.buttons.values():
-            button.set_sensitive(bool(self.image_paths))
+            button.set_sensitive(state)
 
     def move_image_to_class(self, action, parameter, class_name):
         """
@@ -215,29 +213,23 @@ class MainWindow(Gtk.ApplicationWindow):
                 - trash: t
         """
 
-        print("sono dentro move_image_to_class")
-        print(f"{self.image_paths = }")
-        print(f"{self.image_path = }")
-
-        if self.image_path:
+        if self.image_index < len(self.image_paths):
+            image_path = self.image_paths[self.image_index]
+            class_folder = os.path.join(self.current_folder, class_name)
             
             if class_name == "trash":
-                # send2trash.send2trash(str(self.image_path))
-                # TODO use proper bin path
-                new_path = os.path.join("/home/enf/.local/share/Trash/files", self.image_path.name)
+                send2trash.send2trash(str(image_path))
             else:
-                class_folder = os.path.join(self.current_folder, class_name)
                 os.makedirs(class_folder, exist_ok=True)
-                new_path = os.path.join(class_folder, self.image_path.name)
-            
-            self.last_paths.append((self.image_path, new_path))
-            self.image_path.rename(str(new_path))
+                new_path = os.path.join(class_folder, image_path.name)
+                image_path.rename(new_path)
 
-            if self.image_paths:
-                self.show_picture()
-                self.load_and_display_image()
-            else:
-                self.show_status_page()
+            self.last_paths.append((image_path, class_name))
+            
+            self.count[class_name] += 1
+            self.image_index += 1
+            print(self.count, sum(self.count.values()))
+            self.load_and_display_image()
             
     
     def on_window_close(self, window):
@@ -254,20 +246,18 @@ class MainWindow(Gtk.ApplicationWindow):
             print("Nothing to undo.")
             return
 
-        self.image_paths.append(self.image_path)
-        old_path, current_path = self.last_paths.pop()
-        
-        old_path = Path(old_path)
-        current_path = Path(current_path)
+        last_path, class_name = self.last_paths.pop()
+        class_folder = os.path.join(self.current_folder, class_name)
+        new_path = os.path.join(class_folder, last_path.name)
 
-        if os.path.exists(current_path):
-            current_path.rename(old_path)
-            self.image_paths.append(old_path)
+        if os.path.exists(new_path):
+            new_path.rename(last_path)
+            self.count[class_name] -= 1
+            self.image_index -= 1
             self.load_and_display_image()
-            print(f"Undo: Moved {old_path.name} back to original location.")
-            print(f"{old_path = }")
+            print(f"Undo: Moved {last_path.name} back to original location.")
         else:
-            print(f"Undo failed: {old_path = } does not exist.")
+            print(f"Undo failed: {new_path} does not exist.")
 
 class MyApp(Adw.Application):
     def __init__(self, **kwargs):
@@ -285,7 +275,6 @@ class MyApp(Adw.Application):
         self.set_accels_for_action("win.trash", ["t"])
         self.set_accels_for_action("win.quit", ['<primary>q'])
         self.set_accels_for_action("win.undo", ['<primary>z'])
-        self.set_accels_for_action("win.openfolder", ['<primary>o'])
         
         self.win.present()
 
