@@ -121,6 +121,11 @@ class MainWindow(Gtk.ApplicationWindow):
         action_openfolder.connect("activate", lambda action, param: self.show_open_dialog(button=None))
         self.add_action(action_openfolder)
 
+        action_count = Gio.SimpleAction.new("count", None)
+        action_count.connect("activate", lambda action, param: self.count_missing())
+        self.add_action(action_count)
+
+
         self.set_default_settings()
 
 
@@ -129,7 +134,7 @@ class MainWindow(Gtk.ApplicationWindow):
         width = self.settings.get_int("window-width")
         height = self.settings.get_int("window-height")
         self.set_default_size(width, height)
-        print("Default settings set")
+        # print("Default settings set")
 
     
     def create_action_button(self, label, action_name):
@@ -140,6 +145,9 @@ class MainWindow(Gtk.ApplicationWindow):
         self.action_bar.append(button)
         self.buttons[action_name] = button
             
+    
+    def count_missing(self):
+        print(len(self.image_paths))
 
     def show_open_dialog(self, button: None):
         dialog = Gtk.FileDialog()
@@ -147,7 +155,7 @@ class MainWindow(Gtk.ApplicationWindow):
         def on_select(dialog, result):
             try:
                 folder = dialog.select_folder_finish(result)
-                print(f"Selected folder: {folder.get_path()}")
+                # print(f"Selected folder: {folder.get_path()}")
                 self.current_folder = folder.get_path()
                 self.load_images_from_folder(folder.get_path())
             except Gtk.DialogError:
@@ -178,7 +186,7 @@ class MainWindow(Gtk.ApplicationWindow):
         else:
             self.show_status_page()
             self.image_paths = deque([])
-            print("No more images to display.")
+            # print("No more images to display.")
             self.update_button_states()
             return
         print("Something went wrong!")
@@ -215,9 +223,9 @@ class MainWindow(Gtk.ApplicationWindow):
                 - trash: t
         """
 
-        print("sono dentro move_image_to_class")
-        print(f"{self.image_paths = }")
-        print(f"{self.image_path = }")
+        # print("sono dentro move_image_to_class")
+        # print(f"{self.image_paths = }")
+        # print(f"{self.image_path = }")
 
         if self.image_path:
             
@@ -264,10 +272,10 @@ class MainWindow(Gtk.ApplicationWindow):
             current_path.rename(old_path)
             self.image_paths.append(old_path)
             self.load_and_display_image()
-            print(f"Undo: Moved {old_path.name} back to original location.")
-            print(f"{old_path = }")
-        else:
-            print(f"Undo failed: {old_path = } does not exist.")
+            # print(f"Undo: Moved {old_path.name} back to original location.")
+            # print(f"{old_path = }")
+        # else:
+            # print(f"Undo failed: {old_path = } does not exist.")
 
 class MyApp(Adw.Application):
     def __init__(self, **kwargs):
@@ -286,6 +294,7 @@ class MyApp(Adw.Application):
         self.set_accels_for_action("win.quit", ['<primary>q'])
         self.set_accels_for_action("win.undo", ['<primary>z'])
         self.set_accels_for_action("win.openfolder", ['<primary>o'])
+        self.set_accels_for_action("win.count", ['<primary>c'])
         
         self.win.present()
 
