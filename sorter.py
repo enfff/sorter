@@ -28,12 +28,6 @@ class MainWindow(Gtk.ApplicationWindow):
         self.buttons = {}
         self.image_path = ""
 
-        # self.count = {
-        #     "anomaly": 0,
-        #     "background": 0,
-        #     "trash": 0
-        # }
-
         GLib.set_application_name("Sorter")
 
         self.header = Gtk.HeaderBar()
