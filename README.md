@@ -9,6 +9,25 @@ App to sort images in user-defined classes, useful for classifying AI-generated 
 - Load preferred settings
 - Log statistics
 
+# Development
+
+Starting from this repo root, execute
+
+  export GSETTINGS_SCHEMA_DIR = $(pdw)
+
+then
+
+  python3 sorter.py
+
+This program requires a working GTK environment. If missing, install it according to your distribution needs. In WSL2, use the following instructions
+
+  sudo apt install libgtk-4-dev libadwaita-1-dev
+
+and then install the libraries in requirements.txt
+
+  pip3 install -r requirements.txt
+
+
 ### Issues to fix
 
 ``` bash
